@@ -1,4 +1,4 @@
-﻿package com.tensormind.nudge.diagnostics
+package com.tensormind.nudge.diagnostics
 
 import android.content.Context
 import android.content.Intent
@@ -25,7 +25,11 @@ class DeviceHealthService(private val context: Context) {
     fun runFullCheckup(): DeviceHealthReport {
         // Battery
         val ifilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        val batteryStatus = context.registerReceiver(null, ifilter)
+        val batteryStatus = try {
+            context.registerReceiver(null, ifilter)
+        } catch (_: Exception) {
+            null
+        }
         val level = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: 50
         val scale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: 100
         val batteryPercent = (level * 100) / scale.coerceAtLeast(1)

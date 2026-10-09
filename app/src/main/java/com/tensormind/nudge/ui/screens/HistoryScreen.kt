@@ -72,13 +72,13 @@ fun HistoryScreen(
     var showClearConfirmDialog by remember { mutableStateOf(false) }
 
     val filteredList = when (selectedFilter) {
-        "FIX" -> activities.filter { it.category == "FIX" }
+        "FIX" -> activities.filter { it.category == "FIX" || it.category == "BOOST" }
         "SCAM" -> activities.filter { it.category == "SCAM" }
         "CHECKUP" -> activities.filter { it.category == "CHECKUP" }
         else -> activities
     }
 
-    val fixCount = activities.count { it.category == "FIX" }
+    val fixCount = activities.count { it.category == "FIX" || it.category == "BOOST" }
     val scamCount = activities.count { it.category == "SCAM" }
 
     Scaffold(

@@ -77,8 +77,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.scale
 import com.tensormind.nudge.ui.components.ChatAssistantDialog
 import com.tensormind.nudge.ui.components.VoiceListeningDialog
+import android.content.Context
+import com.tensormind.nudge.diagnostics.FamilyRepository
 import kotlinx.coroutines.delay
-import com.tensormind.nudge.ui.components.VoiceAssistantDialog
 import com.tensormind.nudge.ui.theme.BgGradientEnd
 import com.tensormind.nudge.ui.theme.BgGradientMid
 import com.tensormind.nudge.ui.theme.BgGradientStart
@@ -90,11 +91,16 @@ import com.tensormind.nudge.voice.NudgeVoiceManager
 @Composable
 fun HomeScreen(
     selectedTab: Int = 0,
+    sharedText: String? = null,
+    onClearSharedText: () -> Unit = {},
     onTabSelected: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+
+    val prefs = remember { context.getSharedPreferences("nudge_prefs", Context.MODE_PRIVATE) }
+    val savedApiKey = remember { prefs.getString("groq_api_key", "") ?: "" }
 
     // Real Diagnostic & AI Services
     val audioService = remember { AudioDiagnosticService(context) }
@@ -103,7 +109,7 @@ fun HomeScreen(
     val smsService = remember { SmsDiagnosticService(context) }
     val deviceControl = remember { DeviceControlService(context) }
     val skillsEngine = remember { NudgeSkillsEngine(context, audioService, deviceControl) }
-    val groqClient = remember { GroqQwenClient() }
+    val groqClient = remember { GroqQwenClient(apiKey = savedApiKey) }
     val voiceManager = remember { NudgeVoiceManager(context) }
 
     DisposableEffect(Unit) {
@@ -122,6 +128,12 @@ fun HomeScreen(
     var showDevSheet by remember { mutableStateOf(false) }
     var autonomousMode by remember { mutableStateOf(true) }
     var greetingPromptIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(sharedText) {
+        if (!sharedText.isNullOrBlank()) {
+            showScamSheet = true
+        }
+    }
 
     val greetingPrompts = remember {
         listOf(
@@ -421,7 +433,10 @@ fun HomeScreen(
                         accentColor = Color(0xFF21A15C),
                         onClick = {
                             try {
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:"))
+                                val primary = FamilyRepository.getPrimaryMember()
+                                val phone = primary?.phoneNumber ?: ""
+                                val uri = if (phone.isNotBlank()) Uri.parse("tel:$phone") else Uri.parse("tel:")
+                                val intent = Intent(Intent.ACTION_DIAL, uri)
                                 context.startActivity(intent)
                             } catch (_: Exception) {
                                 Toast.makeText(context, "Opening phone dialer...", Toast.LENGTH_SHORT).show()
@@ -502,7 +517,11 @@ fun HomeScreen(
             ScamCheckerSheet(
                 groqClient = groqClient,
                 smsService = smsService,
-                onDismiss = { showScamSheet = false },
+                initialText = sharedText ?: "",
+                onDismiss = {
+                    showScamSheet = false
+                    onClearSharedText()
+                },
                 onSpokenFeedback = { voiceManager.speak(it) }
             )
         }

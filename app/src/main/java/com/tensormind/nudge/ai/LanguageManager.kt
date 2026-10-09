@@ -63,8 +63,9 @@ object LanguageManager {
                 .addHeader("User-Agent", "Mozilla/5.0 (Android; Mobile)")
                 .build()
 
-            val response = httpClient.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext text
+            val body = httpClient.newCall(request).execute().use { response ->
+                response.body?.string()
+            } ?: return@withContext text
 
             val jsonArray = JSONArray(body)
             val segments = jsonArray.getJSONArray(0)

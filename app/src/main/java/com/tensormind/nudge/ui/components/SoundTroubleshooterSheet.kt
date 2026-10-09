@@ -1,4 +1,4 @@
-﻿package com.tensormind.nudge.ui.components
+package com.tensormind.nudge.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -33,8 +33,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tensormind.nudge.R
 import com.tensormind.nudge.diagnostics.AudioDiagnosticService
 import com.tensormind.nudge.diagnostics.AudioStatus
+import com.tensormind.nudge.diagnostics.NudgeActivityRepository
 import com.tensormind.nudge.ui.theme.NavyText
 import com.tensormind.nudge.ui.theme.NudgeBlue
 import com.tensormind.nudge.ui.theme.SlateSubtitle
@@ -147,10 +149,20 @@ fun SoundTroubleshooterSheet(
             // Fix button
             Button(
                 onClick = {
-                    val result = audioService.fixSoundIssues()
+                    val result = audioService.fixSoundIssues(playChime = true)
                     actionMessage = result
                     status = audioService.inspectAudio()
                     onSpokenFeedback(result)
+
+                    NudgeActivityRepository.logActivity(
+                        title = "Sound Restored to 85%",
+                        description = "Unmuted ringer and set volume to 85% with audio confirmation chime.",
+                        category = "FIX",
+                        badgeText = "Sound Fixed",
+                        badgeBg = Color(0xFFE8F8F0),
+                        badgeTextCol = Color(0xFF21A15C),
+                        iconRes = R.drawable.ic_volume_red
+                    )
                 },
                 modifier = Modifier
                     .fillMaxWidth()

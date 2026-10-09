@@ -165,28 +165,40 @@ fun ChatAssistantDialog(
             }
             "OPEN_WIFI" -> {
                 try {
-                    context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                    val intent = Intent(Settings.ACTION_WIFI_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
                 } catch (_: Exception) {
                     Toast.makeText(context, "Opening Wi-Fi settings...", Toast.LENGTH_SHORT).show()
                 }
             }
             "OPEN_BLUETOOTH" -> {
                 try {
-                    context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+                    val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
                 } catch (_: Exception) {
                     Toast.makeText(context, "Opening Bluetooth settings...", Toast.LENGTH_SHORT).show()
                 }
             }
             "OPEN_BATTERY" -> {
                 try {
-                    context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
+                    val intent = Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
                 } catch (_: Exception) {
                     Toast.makeText(context, "Opening Battery Saver...", Toast.LENGTH_SHORT).show()
                 }
             }
             "CALL_FAMILY" -> {
                 try {
-                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:")))
+                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:")).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
                 } catch (_: Exception) {
                     Toast.makeText(context, "Opening Phone dialer...", Toast.LENGTH_SHORT).show()
                 }
@@ -208,13 +220,15 @@ fun ChatAssistantDialog(
             delay(100)
             listState.animateScrollToItem(messages.size)
 
+            val groqResp = groqClient.processUserVoiceQuery(trimmed)
             val execution = engine.executeAutonomousWorkflow(trimmed)
             isThinking = false
 
+            val replyText = if (groqResp.replyText.isNotBlank()) groqResp.replyText else execution.finalResolutionReport
             messages.add(
                 ChatMessage(
                     isUser = false,
-                    text = execution.finalResolutionReport,
+                    text = replyText,
                     steps = execution.steps,
                     badgeTitle = execution.badgeTitle,
                     badgeColor = execution.badgeColor,

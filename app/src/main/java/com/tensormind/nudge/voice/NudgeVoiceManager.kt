@@ -19,7 +19,7 @@ class NudgeVoiceManager(
     private var speechRecognizer: SpeechRecognizer? = null
 
     init {
-        textToSpeech = TextToSpeech(context) { status ->
+        textToSpeech = TextToSpeech(context.applicationContext) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 textToSpeech?.language = Locale.US
                 textToSpeech?.setSpeechRate(0.92f) // Slightly slower for elderly readability

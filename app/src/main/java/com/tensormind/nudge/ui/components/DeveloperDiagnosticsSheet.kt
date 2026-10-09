@@ -1,5 +1,6 @@
 package com.tensormind.nudge.ui.components
 
+import android.content.Context
 import android.os.BatteryManager
 import android.content.Intent
 import android.content.IntentFilter
@@ -33,6 +34,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -76,13 +78,20 @@ fun DeveloperDiagnosticsSheet(
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scrollState = rememberScrollState()
+    val prefs = remember { context.getSharedPreferences("nudge_prefs", Context.MODE_PRIVATE) }
 
     var torchStatus by remember { mutableStateOf(if (deviceControl.isTorchActive()) "Turn Off" else "Turn On") }
     var actionFeedback by remember { mutableStateOf<String?>(null) }
+    var groqApiKeyInput by remember { mutableStateOf(prefs.getString("groq_api_key", "") ?: "") }
+    var apiKeySaveSuccess by remember { mutableStateOf(false) }
 
     // Read device metrics safely
     val ifilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-    val bStatus = context.registerReceiver(null, ifilter)
+    val bStatus = try {
+        context.registerReceiver(null, ifilter)
+    } catch (_: Exception) {
+        null
+    }
     val bLevel = bStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: 80
 
     val stat = StatFs(Environment.getDataDirectory().path)
@@ -466,6 +475,7 @@ fun DeveloperDiagnosticsSheet(
                                     )
                                     .clickable {
                                         LanguageManager.setLanguage(lang.code)
+                                        prefs.edit().putString("selected_lang", lang.code).apply()
                                     }
                                     .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
@@ -502,6 +512,83 @@ fun DeveloperDiagnosticsSheet(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 7. Groq Cloud AI Engine API Key
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(elevation = 1.dp, shape = RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "⚡ Groq Cloud AI Settings",
+                        color = NavyText,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Enter your Groq API key (gsk_...) to enable ultra-fast Qwen 2.5 inference. If unconfigured or offline, Nudge automatically uses the on-device heuristic engine.",
+                        color = SlateSubtitle,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = groqApiKeyInput,
+                        onValueChange = {
+                            groqApiKeyInput = it
+                            apiKeySaveSuccess = false
+                        },
+                        placeholder = { Text("gsk_...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (apiKeySaveSuccess) {
+                            Text(
+                                text = "✓ API Key saved & active!",
+                                color = Color(0xFF15803D),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.width(1.dp))
+                        }
+
+                        Button(
+                            onClick = {
+                                val trimmed = groqApiKeyInput.trim()
+                                prefs.edit().putString("groq_api_key", trimmed).apply()
+                                groqClient.updateApiKey(trimmed)
+                                apiKeySaveSuccess = true
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0E73F6))
+                        ) {
+                            Text("Save Key")
+                        }
                     }
                 }
             }

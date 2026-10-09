@@ -50,6 +50,9 @@ import com.tensormind.nudge.diagnostics.SmsMessageItem
 import com.tensormind.nudge.ui.theme.NavyText
 import com.tensormind.nudge.ui.theme.NudgeBlue
 import com.tensormind.nudge.ui.theme.SlateSubtitle
+import com.tensormind.nudge.R
+import com.tensormind.nudge.diagnostics.NudgeActivityRepository
+import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +60,7 @@ import kotlinx.coroutines.launch
 fun ScamCheckerSheet(
     groqClient: GroqQwenClient,
     smsService: SmsDiagnosticService,
+    initialText: String = "",
     onDismiss: () -> Unit,
     onSpokenFeedback: (String) -> Unit
 ) {
@@ -67,7 +71,7 @@ fun ScamCheckerSheet(
 
     val recentMessages = remember { smsService.getRecentMessages() }
     var selectedMessage by remember { mutableStateOf<SmsMessageItem?>(null) }
-    var customMessageText by remember { mutableStateOf("") }
+    var customMessageText by remember { mutableStateOf(initialText) }
     var isLoading by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<ScamAnalysisResult?>(null) }
 
@@ -80,6 +84,25 @@ fun ScamCheckerSheet(
             result = res
             isLoading = false
             onSpokenFeedback(res.headline + ". " + res.recommendedAction)
+
+            // Log activity to History
+            val isSafe = res.risk == RiskLevel.SAFE
+            NudgeActivityRepository.logActivity(
+                title = if (isSafe) "Message Checked (Safe)" else "Phishing SMS Evaluated",
+                description = "${res.headline}: ${res.explanation}",
+                category = "SCAM",
+                badgeText = if (isSafe) "Safe Message" else "Scam Blocked",
+                badgeBg = if (isSafe) Color(0xFFE8F8F0) else Color(0xFFFFEEEE),
+                badgeTextCol = if (isSafe) Color(0xFF1E824C) else Color(0xFFE53935),
+                iconRes = R.drawable.ic_shield_purple
+            )
+        }
+    }
+
+    LaunchedEffect(initialText) {
+        if (initialText.isNotBlank()) {
+            customMessageText = initialText
+            analyze(initialText)
         }
     }
 
@@ -279,14 +302,19 @@ fun ScamCheckerSheet(
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(
                                 onClick = {
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(
-                                            Intent.EXTRA_TEXT,
-                                            "Hi! Nudge warned me that a text from '${selectedMessage?.sender ?: "an unknown number"}' is a dangerous scam. I did not click the link. Just letting you know!"
-                                        )
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share Warning with Family"))
+                                    try {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(
+                                                Intent.EXTRA_TEXT,
+                                                "Hi! Nudge warned me that a text from '${selectedMessage?.sender ?: "an unknown number"}' is a dangerous scam. I did not click the link. Just letting you know!"
+                                            )
+                                        }
+                                        val chooser = Intent.createChooser(shareIntent, "Share Warning with Family").apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(chooser)
+                                    } catch (_: Exception) {}
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()

@@ -11,9 +11,17 @@ import androidx.compose.ui.Modifier
 @Composable
 fun MainContainer(
     initialTab: Int = 0,
+    sharedText: String? = null,
+    onClearSharedText: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableIntStateOf(initialTab) }
+
+    androidx.compose.runtime.LaunchedEffect(sharedText) {
+        if (!sharedText.isNullOrBlank()) {
+            selectedTab = 0
+        }
+    }
 
     Crossfade(
         targetState = selectedTab,
@@ -23,6 +31,8 @@ fun MainContainer(
         when (tab) {
             0 -> HomeScreen(
                 selectedTab = selectedTab,
+                sharedText = sharedText,
+                onClearSharedText = onClearSharedText,
                 onTabSelected = { selectedTab = it }
             )
             1 -> HistoryScreen(

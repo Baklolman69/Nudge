@@ -104,10 +104,11 @@ class GroqQwenClient(
                     .post(bodyJson.toString().toRequestBody("application/json".toMediaType()))
                     .build()
 
-                val response = client.newCall(request).execute()
-                val respBody = response.body?.string() ?: ""
+                val (isSuccess, respBody) = client.newCall(request).execute().use { response ->
+                    Pair(response.isSuccessful, response.body?.string() ?: "")
+                }
 
-                if (response.isSuccessful) {
+                if (isSuccess) {
                     val jsonResp = JSONObject(respBody)
                     val content = jsonResp.getJSONArray("choices")
                         .getJSONObject(0)
@@ -212,10 +213,11 @@ class GroqQwenClient(
                     .post(bodyJson.toString().toRequestBody("application/json".toMediaType()))
                     .build()
 
-                val response = client.newCall(request).execute()
-                val respBody = response.body?.string() ?: ""
+                val (isSuccess, respBody) = client.newCall(request).execute().use { response ->
+                    Pair(response.isSuccessful, response.body?.string() ?: "")
+                }
 
-                if (response.isSuccessful) {
+                if (isSuccess) {
                     val jsonResp = JSONObject(respBody)
                     val content = jsonResp.getJSONArray("choices")
                         .getJSONObject(0)

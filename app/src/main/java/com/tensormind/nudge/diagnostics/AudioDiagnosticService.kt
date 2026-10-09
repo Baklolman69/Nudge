@@ -2,9 +2,11 @@ package com.tensormind.nudge.diagnostics
 
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.media.AudioManager
 import android.media.RingtoneManager
 import android.os.Build
+import android.provider.Settings
 
 data class AudioStatus(
     val ringerVolumePercent: Int,
@@ -65,38 +67,79 @@ class AudioDiagnosticService(private val context: Context) {
         )
     }
 
-    fun fixSoundIssues(playChime: Boolean = false): String {
-        try {
-            // 1. Switch back to normal ringer mode
-            audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
-
-            // 2. Set Ringtone volume to 85%
-            val maxRing = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
-            val targetRing = (maxRing * 0.85).toInt().coerceAtLeast(1)
-            audioManager.setStreamVolume(AudioManager.STREAM_RING, targetRing, 0)
-
-            // 3. Set Media volume to 80%
-            val maxMedia = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            val targetMedia = (maxMedia * 0.80).toInt().coerceAtLeast(1)
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetMedia, 0)
-
-            // 4. Set Notification volume to 85%
-            val maxNotif = audioManager.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION)
-            val targetNotif = (maxNotif * 0.85).toInt().coerceAtLeast(1)
-            audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, targetNotif, 0)
-
-            // 5. Play chime only if explicitly requested
-            if (playChime) {
-                playChime()
-            }
-
-            return "I turned off Silent mode and set your ringtone and media volume to 85%."
-        } catch (e: Exception) {
-            return "Adjusted volume levels. Please check if Do Not Disturb requires special permission."
+    fun canModifyDoNotDisturb(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            notificationManager.isNotificationPolicyAccessGranted
+        } else {
+            true
         }
     }
 
-    private fun playChime() {
+    fun openDndSettingsIntent(): Intent {
+        return Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+    }
+
+    fun fixSoundIssues(playChime: Boolean = false): String {
+        var ringerRestored = false
+        var dndWarning = false
+
+        // 1. Switch back to normal ringer mode if allowed
+        try {
+            if (canModifyDoNotDisturb()) {
+                audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+                ringerRestored = true
+            } else {
+                // If not allowed, only set ringer mode if not currently in silent mode
+                if (audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+                    ringerRestored = true
+                } else {
+                    dndWarning = true
+                }
+            }
+        } catch (_: Exception) {
+            dndWarning = true
+        }
+
+        // 2. Set Ringtone volume to 85%
+        try {
+            val maxRing = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
+            val targetRing = (maxRing * 0.85).toInt().coerceAtLeast(1)
+            audioManager.setStreamVolume(AudioManager.STREAM_RING, targetRing, 0)
+        } catch (_: Exception) {
+            dndWarning = true
+        }
+
+        // 3. Set Media volume to 80% (Media stream is never blocked by DND policy)
+        try {
+            val maxMedia = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            val targetMedia = (maxMedia * 0.80).toInt().coerceAtLeast(1)
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetMedia, 0)
+        } catch (_: Exception) {}
+
+        // 4. Set Notification volume to 85%
+        try {
+            val maxNotif = audioManager.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION)
+            val targetNotif = (maxNotif * 0.85).toInt().coerceAtLeast(1)
+            audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, targetNotif, 0)
+        } catch (_: Exception) {
+            dndWarning = true
+        }
+
+        // 5. Play chime if requested
+        if (playChime) {
+            playChime()
+        }
+
+        return if (dndWarning && !canModifyDoNotDisturb()) {
+            "I adjusted your media volume to 80%. Turn off Do Not Disturb in Settings to fully unmute calls."
+        } else {
+            "I turned off Silent mode and set your ringtone and media volume to 85%."
+        }
+    }
+
+    fun playChime() {
         try {
             val notificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             val ringtone = RingtoneManager.getRingtone(context, notificationUri)

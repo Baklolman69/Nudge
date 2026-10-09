@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -203,7 +204,7 @@ fun FamilyScreen(
                 familyMembers.forEach { member ->
                     FamilyMemberCard(
                         member = member,
-                        onLongClick = { selectedMemberForOptions = member }
+                        onManageClick = { selectedMemberForOptions = member }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -441,14 +442,13 @@ fun FamilyScreen(
 @Composable
 private fun FamilyMemberCard(
     member: FamilyContact,
-    onLongClick: () -> Unit = {}
+    onManageClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onLongClick() }
             .shadow(elevation = 1.dp, shape = RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -506,6 +506,16 @@ private fun FamilyMemberCard(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFF1F5F9))
+                        .clickable { onManageClick() }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(text = "Edit", color = SlateSubtitle, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
 

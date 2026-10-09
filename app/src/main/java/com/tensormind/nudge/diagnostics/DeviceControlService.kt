@@ -14,7 +14,8 @@ class DeviceControlService(private val context: Context) {
     fun toggleTorch(): String {
         return try {
             val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
-            val cameraId = cameraManager?.cameraIdList?.firstOrNull()
+                ?: return "No camera service found on this device."
+            val cameraId = findFlashCameraId(cameraManager)
                 ?: return "No flashlight hardware found on this device."
             isTorchOn = !isTorchOn
             cameraManager.setTorchMode(cameraId, isTorchOn)
@@ -22,6 +23,30 @@ class DeviceControlService(private val context: Context) {
         } catch (e: Exception) {
             "Could not toggle flashlight: ${e.localizedMessage ?: "Camera unavailable"}"
         }
+    }
+
+    private fun findFlashCameraId(cameraManager: CameraManager): String? {
+        // First look for back-facing camera with flash
+        for (id in cameraManager.cameraIdList) {
+            try {
+                val chars = cameraManager.getCameraCharacteristics(id)
+                val hasFlash = chars.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+                val facing = chars.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING)
+                if (hasFlash && facing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) {
+                    return id
+                }
+            } catch (_: Exception) {}
+        }
+        // Fallback to any camera with flash
+        for (id in cameraManager.cameraIdList) {
+            try {
+                val chars = cameraManager.getCameraCharacteristics(id)
+                if (chars.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true) {
+                    return id
+                }
+            } catch (_: Exception) {}
+        }
+        return null
     }
 
     fun isTorchActive(): Boolean = isTorchOn

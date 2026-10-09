@@ -182,7 +182,7 @@ class NudgeSkillsEngine(
         NudgeActivityRepository.logActivity(
             title = "Device Speed Boosted",
             description = "Autonomous performance optimization: reclaimed $freedMb MB of RAM and cleared temporary app cache.",
-            category = "BOOST",
+            category = "FIX",
             badgeText = "Speed Boost",
             badgeBg = Color(0xFFEFF6FF),
             badgeTextCol = Color(0xFF007AFF),
@@ -349,9 +349,13 @@ class NudgeSkillsEngine(
 
         // Battery
         val ifilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        val bStatus = context.registerReceiver(null, ifilter)
+        val bStatus = try {
+            context.registerReceiver(null, ifilter)
+        } catch (_: Exception) {
+            null
+        }
         val level = bStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: 85
-        val tempRaw = bStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 280
+        val tempRaw = bStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 280)?.takeIf { it > 0 } ?: 280
         val tempC = tempRaw / 10.0
 
         steps.add(

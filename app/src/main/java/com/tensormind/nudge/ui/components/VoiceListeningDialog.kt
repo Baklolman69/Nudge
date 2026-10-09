@@ -1,5 +1,10 @@
 package com.tensormind.nudge.ui.components
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -90,7 +95,16 @@ fun VoiceListeningDialog(
     val devControl = deviceControl ?: remember { DeviceControlService(context) }
     val engine = skillsEngine ?: remember { NudgeSkillsEngine(context, audioService, devControl) }
 
-    var voiceState by remember { mutableStateOf(VoiceState.LISTENING) }
+    var hasMicPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    var voiceState by remember { mutableStateOf(if (hasMicPermission) VoiceState.LISTENING else VoiceState.IDLE) }
     var userSpokenQuery by remember { mutableStateOf("") }
     var aiSpokenAnswer by remember { mutableStateOf("") }
     var executionSteps by remember { mutableStateOf<List<SkillExecutionStep>>(emptyList()) }
@@ -151,16 +165,22 @@ fun VoiceListeningDialog(
         voiceState = VoiceState.THINKING
 
         scope.launch {
+            // 1. Reason with Groq Cloud Qwen 2.5 (populates groqClient.latestTelemetry)
+            val groqResp = groqClient.processUserVoiceQuery(speech)
+
+            // 2. Execute on-device diagnostic & remediation skill
             val executionResult = engine.executeAutonomousWorkflow(speech)
-            aiSpokenAnswer = executionResult.finalResolutionReport
+
+            val replyToSpeak = if (groqResp.replyText.isNotBlank()) groqResp.replyText else executionResult.finalResolutionReport
+            aiSpokenAnswer = replyToSpeak
             executionSteps = executionResult.steps
             resolutionBadge = executionResult.badgeTitle
             voiceState = VoiceState.SPEAKING
-            voiceManager.speak(executionResult.finalResolutionReport)
+            voiceManager.speak(replyToSpeak)
         }
     }
 
-    fun startListening() {
+    fun startListeningInternal() {
         voiceManager.stopSpeaking()
         userSpokenQuery = ""
         aiSpokenAnswer = ""
@@ -177,20 +197,46 @@ fun VoiceListeningDialog(
         )
     }
 
-    // Auto-start listening on open
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasMicPermission = granted
+        if (granted) {
+            startListeningInternal()
+        } else {
+            voiceState = VoiceState.IDLE
+            aiSpokenAnswer = "Microphone access is needed so Nudge can hear you. Please tap 'Allow Microphone' below."
+        }
+    }
+
+    fun startListening() {
+        if (!hasMicPermission) {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        } else {
+            startListeningInternal()
+        }
+    }
+
+    // Auto-start listening on open if permission is granted, otherwise request permission
     LaunchedEffect(Unit) {
-        startListening()
+        if (hasMicPermission) {
+            startListeningInternal()
+        } else {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
     }
 
     DisposableEffect(Unit) {
         onDispose {
             voiceManager.stopSpeaking()
+            voiceManager.stopListening()
         }
     }
 
     ModalBottomSheet(
         onDismissRequest = {
             voiceManager.stopSpeaking()
+            voiceManager.stopListening()
             onDismiss()
         },
         sheetState = sheetState,
@@ -360,6 +406,18 @@ fun VoiceListeningDialog(
                 textAlign = TextAlign.Center,
                 lineHeight = 20.sp
             )
+
+            if (!hasMicPermission) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Button(
+                    onClick = { micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                    colors = ButtonDefaults.buttonColors(containerColor = NudgeBlue),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Text("🎙️ Allow Microphone Access", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
 
             // User's speech transcript
             if (userSpokenQuery.isNotBlank()) {
