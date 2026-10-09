@@ -12,22 +12,36 @@ import com.tensormind.nudge.ui.screens.MainContainer
 import com.tensormind.nudge.ui.screens.OnboardingContainer
 import com.tensormind.nudge.ui.theme.NudgeTheme
 
+import android.content.Context
+import com.tensormind.nudge.ai.LanguageManager
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             NudgeTheme {
-                var showHomeScreen by remember { mutableStateOf(true) }
+                val prefs = remember { getSharedPreferences("nudge_prefs", Context.MODE_PRIVATE) }
+                var showHomeScreen by remember {
+                    mutableStateOf(prefs.getBoolean("has_completed_onboarding", false))
+                }
 
                 if (showHomeScreen) {
                     MainContainer()
                 } else {
                     OnboardingContainer(
                         onComplete = {
+                            prefs.edit()
+                                .putBoolean("has_completed_onboarding", true)
+                                .putString("selected_lang", LanguageManager.currentLanguageCode)
+                                .apply()
                             showHomeScreen = true
                         },
                         onFamilyMemberSelected = {
+                            prefs.edit()
+                                .putBoolean("has_completed_onboarding", true)
+                                .putString("selected_lang", LanguageManager.currentLanguageCode)
+                                .apply()
                             showHomeScreen = true
                         }
                     )

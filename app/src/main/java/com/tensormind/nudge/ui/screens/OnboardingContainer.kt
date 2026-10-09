@@ -21,7 +21,13 @@ fun OnboardingContainer(
         modifier = Modifier.fillMaxSize()
     ) { page ->
         when (page) {
-            0 -> SplashScreen1()
+            0 -> SplashScreen1(
+                onNext = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(1)
+                    }
+                }
+            )
             1 -> SplashScreen2(
                 onGetStarted = {
                     coroutineScope.launch {

@@ -39,11 +39,51 @@ import com.tensormind.nudge.ui.theme.NudgeBlue
 import com.tensormind.nudge.ui.theme.NudgeTheme
 import com.tensormind.nudge.ui.theme.SlateSubtitle
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.tensormind.nudge.ai.LanguageManager
+
 @Composable
 fun SplashScreen2(
     onGetStarted: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var title by remember { mutableStateOf("For a simpler\ndigital life") }
+    var subtitle by remember { mutableStateOf("We help you fix problems, spot scams, and keep your phone running smoothly.") }
+    var f1Title by remember { mutableStateOf("Solve phone issues") }
+    var f1Desc by remember { mutableStateOf("Sound, internet, settings & more") }
+    var f2Title by remember { mutableStateOf("Stay safe from scams") }
+    var f2Desc by remember { mutableStateOf("Check messages and links") }
+    var f3Title by remember { mutableStateOf("Keep your family close") }
+    var f3Desc by remember { mutableStateOf("Get help when you need it") }
+    var getStartedText by remember { mutableStateOf("Get Started") }
+
+    LaunchedEffect(LanguageManager.currentLanguageCode) {
+        if (LanguageManager.currentLanguageCode == "en") {
+            title = "For a simpler\ndigital life"
+            subtitle = "We help you fix problems, spot scams, and keep your phone running smoothly."
+            f1Title = "Solve phone issues"
+            f1Desc = "Sound, internet, settings & more"
+            f2Title = "Stay safe from scams"
+            f2Desc = "Check messages and links"
+            f3Title = "Keep your family close"
+            f3Desc = "Get help when you need it"
+            getStartedText = "Get Started"
+        } else {
+            title = LanguageManager.translate("For a simpler digital life")
+            subtitle = LanguageManager.translate("We help you fix problems, spot scams, and keep your phone running smoothly.")
+            f1Title = LanguageManager.translate("Solve phone issues")
+            f1Desc = LanguageManager.translate("Sound, internet, settings & more")
+            f2Title = LanguageManager.translate("Stay safe from scams")
+            f2Desc = LanguageManager.translate("Check messages and links")
+            f3Title = LanguageManager.translate("Keep your family close")
+            f3Desc = LanguageManager.translate("Get help when you need it")
+            getStartedText = LanguageManager.translate("Get Started")
+        }
+    }
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -63,7 +103,7 @@ fun SplashScreen2(
 
             // Main Title
             Text(
-                text = "For a simpler\ndigital life",
+                text = title,
                 color = NavyText,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
@@ -76,7 +116,7 @@ fun SplashScreen2(
 
             // Subtitle
             Text(
-                text = "We help you fix problems, spot scams, and keep your phone running smoothly.",
+                text = subtitle,
                 color = SlateSubtitle,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Normal,
@@ -114,24 +154,24 @@ fun SplashScreen2(
             // Feature Cards
             FeatureCard(
                 iconRes = R.drawable.ic_shield_green,
-                title = "Solve phone issues",
-                description = "Sound, internet, settings & more"
+                title = f1Title,
+                description = f1Desc
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             FeatureCard(
                 iconRes = R.drawable.ic_shield_purple,
-                title = "Stay safe from scams",
-                description = "Check messages and links"
+                title = f2Title,
+                description = f2Desc
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             FeatureCard(
                 iconRes = R.drawable.ic_family_orange,
-                title = "Keep your family close",
-                description = "Get help when you need it"
+                title = f3Title,
+                description = f3Desc
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -154,7 +194,7 @@ fun SplashScreen2(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Get Started",
+                        text = getStartedText,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold
                     )

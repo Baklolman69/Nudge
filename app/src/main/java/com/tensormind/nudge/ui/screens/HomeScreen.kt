@@ -216,6 +216,22 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        val currentLang = com.tensormind.nudge.ai.LanguageManager.getSelectedLanguage()
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFF1F5F9))
+                                .clickable { showDevSheet = true }
+                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "${currentLang.flagEmoji} ${currentLang.code.uppercase()}",
+                                color = NavyText,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))

@@ -8,6 +8,8 @@ import android.os.StatFs
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import com.tensormind.nudge.ai.LanguageManager
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -412,6 +415,94 @@ fun DeveloperDiagnosticsSheet(
                         fontSize = 13.sp,
                         lineHeight = 18.sp
                     )
+                }
+            }
+
+            // 6. Language & Voice Settings
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(elevation = 1.dp, shape = RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "🌐 Language & Voice Support",
+                        color = NavyText,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Google Translation API is used for translations. Voice TTS is only supported in English.",
+                        color = SlateSubtitle,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LanguageManager.supportedLanguages.forEach { lang ->
+                            val isSelected = (lang.code == LanguageManager.currentLanguageCode)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) Color(0xFF0E73F6) else Color(0xFFF1F5F9))
+                                    .border(
+                                        width = if (isSelected) 1.5.dp else 0.dp,
+                                        color = if (isSelected) Color(0xFF0E73F6) else Color.Transparent,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .clickable {
+                                        LanguageManager.setLanguage(lang.code)
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(text = lang.flagEmoji, fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = lang.displayName,
+                                        color = if (isSelected) Color.White else NavyText,
+                                        fontSize = 13.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    val selectedLang = LanguageManager.getSelectedLanguage()
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selectedLang.hasTts) Color(0xFFE8F8F0) else Color(0xFFFFFBEB))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = if (selectedLang.hasTts) {
+                                "🎙️ Voice TTS is active (English)"
+                            } else {
+                                "💬 Text-only mode: Voice TTS disabled (${selectedLang.displayName})"
+                            },
+                            color = if (selectedLang.hasTts) Color(0xFF15803D) else Color(0xFFB45309),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
 

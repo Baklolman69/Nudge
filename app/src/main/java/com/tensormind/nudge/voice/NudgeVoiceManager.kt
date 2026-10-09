@@ -8,6 +8,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import java.util.Locale
+import com.tensormind.nudge.ai.LanguageManager
 
 class NudgeVoiceManager(
     private val context: Context,
@@ -30,6 +31,11 @@ class NudgeVoiceManager(
     }
 
     fun speak(text: String) {
+        // TTS is only enabled if the user selected English
+        if (!LanguageManager.isTtsSupported()) {
+            return
+        }
+
         if (isTtsInitialized && text.isNotBlank()) {
             textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "NUDGE_SPEECH_ID")
         }
