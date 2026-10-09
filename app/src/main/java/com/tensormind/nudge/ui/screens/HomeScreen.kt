@@ -50,9 +50,11 @@ import androidx.compose.ui.unit.sp
 import com.tensormind.nudge.R
 import com.tensormind.nudge.ai.GroqQwenClient
 import com.tensormind.nudge.diagnostics.AudioDiagnosticService
+import com.tensormind.nudge.diagnostics.DeviceControlService
 import com.tensormind.nudge.diagnostics.SmsDiagnosticService
 import com.tensormind.nudge.diagnostics.DeviceHealthService
 import com.tensormind.nudge.diagnostics.NetworkDiagnosticService
+import com.tensormind.nudge.ui.components.DeveloperDiagnosticsSheet
 import com.tensormind.nudge.ui.components.FullCheckupCard
 import com.tensormind.nudge.ui.components.FullCheckupSheet
 import com.tensormind.nudge.ui.components.NetworkTroubleshooterSheet
@@ -86,10 +88,11 @@ import com.tensormind.nudge.voice.NudgeVoiceManager
 
 @Composable
 fun HomeScreen(
+    selectedTab: Int = 0,
+    onTabSelected: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
 
     // Real Diagnostic & AI Services
@@ -97,6 +100,7 @@ fun HomeScreen(
     val networkService = remember { NetworkDiagnosticService(context) }
     val healthService = remember { DeviceHealthService(context) }
     val smsService = remember { SmsDiagnosticService(context) }
+    val deviceControl = remember { DeviceControlService(context) }
     val groqClient = remember { GroqQwenClient() }
     val voiceManager = remember { NudgeVoiceManager(context) }
 
@@ -113,6 +117,8 @@ fun HomeScreen(
     var showCheckupSheet by remember { mutableStateOf(false) }
     var showVoiceSheet by remember { mutableStateOf(false) }
     var showChatSheet by remember { mutableStateOf(false) }
+    var showDevSheet by remember { mutableStateOf(false) }
+    var autonomousMode by remember { mutableStateOf(true) }
     var greetingPromptIndex by remember { mutableIntStateOf(0) }
 
     val greetingPrompts = remember {
@@ -156,7 +162,7 @@ fun HomeScreen(
         bottomBar = {
             NudgeBottomNavigation(
                 selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it }
+                onTabSelected = onTabSelected
             )
         },
         modifier = modifier.fillMaxSize()
@@ -206,15 +212,33 @@ fun HomeScreen(
                         )
                     }
 
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_settings),
-                        contentDescription = "Settings",
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clickable {
-                                Toast.makeText(context, "Nudge AI is active", Toast.LENGTH_SHORT).show()
-                            }
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF1E293B))
+                                .clickable { showDevSheet = true }
+                                .padding(horizontal = 8.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = "DEV",
+                                color = Color(0xFF22C55E),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_settings),
+                            contentDescription = "Settings & Developer Console",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable { showDevSheet = true }
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -489,7 +513,21 @@ fun HomeScreen(
                 voiceManager = voiceManager,
                 groqClient = groqClient,
                 audioService = audioService,
+                deviceControl = deviceControl,
                 onDismiss = { showVoiceSheet = false }
+            )
+        }
+
+        if (showDevSheet) {
+            DeveloperDiagnosticsSheet(
+                groqClient = groqClient,
+                audioService = audioService,
+                networkService = networkService,
+                healthService = healthService,
+                deviceControl = deviceControl,
+                autonomousMode = autonomousMode,
+                onAutonomousModeChanged = { autonomousMode = it },
+                onDismiss = { showDevSheet = false }
             )
         }
     }

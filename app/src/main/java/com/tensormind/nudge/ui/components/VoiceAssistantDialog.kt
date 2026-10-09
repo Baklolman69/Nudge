@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -63,14 +64,21 @@ import com.tensormind.nudge.ui.theme.SlateSubtitle
 import com.tensormind.nudge.voice.NudgeVoiceManager
 import kotlinx.coroutines.launch
 
+import android.content.Intent
+import android.provider.Settings
+import com.tensormind.nudge.diagnostics.DeviceControlService
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun VoiceAssistantDialog(
     voiceManager: NudgeVoiceManager,
     groqClient: GroqQwenClient,
     audioService: AudioDiagnosticService,
+    deviceControl: DeviceControlService? = null,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val devControl = deviceControl ?: remember { DeviceControlService(context) }
     var queryText by remember { mutableStateOf("") }
     var typedInput by remember { mutableStateOf("") }
     var responseText by remember { mutableStateOf("How can I help you today? Speak or type below.") }
@@ -101,9 +109,46 @@ fun VoiceAssistantDialog(
             val agentResp = groqClient.processUserVoiceQuery(query)
             var reply = agentResp.replyText
 
-            if (agentResp.actionCommand == "FIX_AUDIO") {
-                val fixResult = audioService.fixSoundIssues()
-                reply = "$reply $fixResult"
+            when (agentResp.actionCommand) {
+                "FIX_AUDIO" -> {
+                    val fixResult = audioService.fixSoundIssues()
+                    reply = "$reply $fixResult"
+                }
+                "TOGGLE_TORCH" -> {
+                    val torchRes = devControl.toggleTorch()
+                    reply = "$reply $torchRes"
+                }
+                "OPEN_BRIGHTNESS" -> {
+                    devControl.openDisplaySettings()
+                    reply = "$reply Opening display settings."
+                }
+                "OPEN_ALARM" -> {
+                    devControl.openAlarmSettings()
+                    reply = "$reply Opening clock and alarms."
+                }
+                "CALL_FAMILY" -> {
+                    devControl.openDialer()
+                    reply = "$reply Opening phone dialer."
+                }
+                "OPEN_SETTINGS" -> {
+                    devControl.openApplicationSettings()
+                    reply = "$reply Opening settings."
+                }
+                "OPEN_WIFI" -> {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
+                    } catch (_: Exception) {}
+                }
+                "OPEN_BLUETOOTH" -> {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
+                    } catch (_: Exception) {}
+                }
+                "OPEN_BATTERY" -> {
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_POWER_USAGE_SUMMARY).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
+                    } catch (_: Exception) {}
+                }
             }
 
             responseText = reply

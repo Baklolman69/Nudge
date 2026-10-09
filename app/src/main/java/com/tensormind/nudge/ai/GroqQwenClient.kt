@@ -23,14 +23,27 @@ data class ScamAnalysisResult(
     val recommendedAction: String
 )
 
+data class AgentTelemetry(
+    val lastPrompt: String,
+    val modelUsed: String,
+    val latencyMs: Long,
+    val rawJson: String,
+    val actionCommand: String?,
+    val executionMode: String
+)
+
 data class NudgeAgentResponse(
     val replyText: String,
-    val actionCommand: String? = null // "FIX_AUDIO", "OPEN_WIFI", "OPEN_BLUETOOTH", "OPEN_BATTERY", "CALL_FAMILY", "OPEN_SCAM_CHECK", "NONE"
+    val actionCommand: String? = null,
+    val telemetry: AgentTelemetry? = null
 )
 
 class GroqQwenClient(
     private var apiKey: String = ""
 ) {
+    var latestTelemetry: AgentTelemetry? = null
+        private set
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(12, TimeUnit.SECONDS)
@@ -126,35 +139,49 @@ class GroqQwenClient(
     }
 
     suspend fun processUserVoiceQuery(userSpeech: String): NudgeAgentResponse = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
         val lower = userSpeech.lowercase().trim()
 
         // Fast offline intent detector for instant backup
         val offlineAction = when {
+            lower.contains("torch") || lower.contains("flashlight") || lower.contains("light") || lower.contains("dark") -> "TOGGLE_TORCH"
             lower.contains("sound") || lower.contains("hear") || lower.contains("ring") || 
             lower.contains("volume") || lower.contains("quiet") || lower.contains("mute") || lower.contains("silent") -> "FIX_AUDIO"
             lower.contains("wifi") || lower.contains("internet") || lower.contains("network") || 
             lower.contains("data") || lower.contains("web") || lower.contains("connect") -> "OPEN_WIFI"
             lower.contains("bluetooth") || lower.contains("headphone") || lower.contains("speaker") || lower.contains("earbud") -> "OPEN_BLUETOOTH"
             lower.contains("battery") || lower.contains("power") || lower.contains("drain") || lower.contains("charge") || lower.contains("hot") -> "OPEN_BATTERY"
+            lower.contains("brightness") || lower.contains("dim") || lower.contains("screen") || lower.contains("display") -> "OPEN_BRIGHTNESS"
+            lower.contains("alarm") || lower.contains("wake") || lower.contains("timer") || lower.contains("clock") -> "OPEN_ALARM"
+            lower.contains("checkup") || lower.contains("health") || lower.contains("diagnose") || lower.contains("scan") || lower.contains("status") -> "RUN_CHECKUP"
             lower.contains("call") || lower.contains("dial") || lower.contains("phone") || lower.contains("family") || lower.contains("daughter") || lower.contains("son") -> "CALL_FAMILY"
             lower.contains("scam") || lower.contains("fraud") || lower.contains("fake") || lower.contains("sms") || lower.contains("text message") -> "OPEN_SCAM_CHECK"
             else -> "NONE"
         }
 
         if (apiKey.isBlank()) {
-            return@withContext getFriendlyFallbackResponse(lower, offlineAction)
+            val fallback = getFriendlyFallbackResponse(lower, offlineAction)
+            val telem = AgentTelemetry(
+                lastPrompt = userSpeech,
+                modelUsed = "Heuristic Rule Engine (Offline)",
+                latencyMs = System.currentTimeMillis() - startTime,
+                rawJson = "{\"action\": \"$offlineAction\", \"source\": \"offline_heuristic\"}",
+                actionCommand = fallback.actionCommand,
+                executionMode = "OFFLINE_HEURISTIC"
+            )
+            latestTelemetry = telem
+            return@withContext fallback.copy(telemetry = telem)
         }
 
         val systemPrompt = """
-            You are Nudge, the world's most patient, caring, and loving phone companion for seniors and elderly users.
-            Speak like a warm, loving grandchild or dear family friend.
-            Always be comforting, positive, and reassuring.
+            You are Nudge, the friendly, caring on-device phone assistant for seniors and non-tech users.
+            Always be comforting, positive, and clear.
             Never use confusing technical jargon or abbreviations.
             Keep your answer to 1 or 2 short, clear sentences.
             You must reply in JSON format with two keys:
             {
               "reply": "Your warm, loving 1-2 sentence response explaining simply what we are doing to help.",
-              "action": "FIX_AUDIO" | "OPEN_WIFI" | "OPEN_BLUETOOTH" | "OPEN_BATTERY" | "CALL_FAMILY" | "OPEN_SCAM_CHECK" | "NONE"
+              "action": "TOGGLE_TORCH" | "FIX_AUDIO" | "OPEN_WIFI" | "OPEN_BLUETOOTH" | "OPEN_BATTERY" | "OPEN_BRIGHTNESS" | "OPEN_ALARM" | "RUN_CHECKUP" | "CALL_FAMILY" | "OPEN_SCAM_CHECK" | "NONE"
             }
         """.trimIndent()
 
@@ -202,9 +229,21 @@ class GroqQwenClient(
                         action = offlineAction
                     }
 
+                    val finalAction = if (action != "NONE") action else null
+                    val telem = AgentTelemetry(
+                        lastPrompt = userSpeech,
+                        modelUsed = "$model (Groq Cloud)",
+                        latencyMs = System.currentTimeMillis() - startTime,
+                        rawJson = content,
+                        actionCommand = finalAction,
+                        executionMode = "GROQ_LLM_AGENT"
+                    )
+                    latestTelemetry = telem
+
                     return@withContext NudgeAgentResponse(
                         replyText = reply,
-                        actionCommand = if (action != "NONE") action else null
+                        actionCommand = finalAction,
+                        telemetry = telem
                     )
                 }
             } catch (_: Exception) {
@@ -214,15 +253,29 @@ class GroqQwenClient(
         }
 
         // Resilient fallback if network was unreachable
-        getFriendlyFallbackResponse(lower, offlineAction)
+        val fallback = getFriendlyFallbackResponse(lower, offlineAction)
+        val telem = AgentTelemetry(
+            lastPrompt = userSpeech,
+            modelUsed = "Heuristic Fallback (Cloud Offline)",
+            latencyMs = System.currentTimeMillis() - startTime,
+            rawJson = "{\"action\": \"$offlineAction\", \"status\": \"cloud_unreachable\"}",
+            actionCommand = fallback.actionCommand,
+            executionMode = "OFFLINE_FALLBACK"
+        )
+        latestTelemetry = telem
+        fallback.copy(telemetry = telem)
     }
 
     private fun getFriendlyFallbackResponse(query: String, action: String): NudgeAgentResponse {
         val reply = when (action) {
+            "TOGGLE_TORCH" -> "I am toggling your flashlight for you right away!"
             "FIX_AUDIO" -> "Don't worry at all! I'm checking your sound and turning your ringer volume up so you won't miss any calls."
             "OPEN_WIFI" -> "I'm right here with you! Let's check your Wi-Fi connection together to get you back online."
             "OPEN_BLUETOOTH" -> "Let's check your Bluetooth settings so your audio and accessories connect smoothly."
             "OPEN_BATTERY" -> "I noticed your phone needs some care. Let's look at your battery saver settings to keep it running cool and lasting long."
+            "OPEN_BRIGHTNESS" -> "Let's check your display settings so your screen is easy to read and comfortable on your eyes."
+            "OPEN_ALARM" -> "Opening your clock and alarms for you right away!"
+            "RUN_CHECKUP" -> "Running a complete health scan of your phone's battery, storage, sound, and network!"
             "CALL_FAMILY" -> "Of course! Let's open your phone dialer so you can reach your loved ones right away."
             "OPEN_SCAM_CHECK" -> "You did the right thing asking! Let's scan your messages to make sure you stay completely safe."
             else -> "Hello! I'm Nudge, your phone's best friend. Whatever is bothering you with your phone, I'm here to fix it for you!"

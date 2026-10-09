@@ -52,8 +52,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.ui.platform.LocalContext
+import com.tensormind.nudge.R
 import com.tensormind.nudge.ai.GroqQwenClient
 import com.tensormind.nudge.diagnostics.AudioDiagnosticService
+import com.tensormind.nudge.diagnostics.DeviceControlService
+import com.tensormind.nudge.diagnostics.NudgeActivityRepository
 import com.tensormind.nudge.ui.theme.NavyText
 import com.tensormind.nudge.ui.theme.NudgeBlue
 import com.tensormind.nudge.ui.theme.SlateSubtitle
@@ -74,8 +80,11 @@ fun VoiceListeningDialog(
     voiceManager: NudgeVoiceManager,
     groqClient: GroqQwenClient,
     audioService: AudioDiagnosticService,
+    deviceControl: DeviceControlService? = null,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val devControl = deviceControl ?: remember { DeviceControlService(context) }
     var voiceState by remember { mutableStateOf(VoiceState.LISTENING) }
     var userSpokenQuery by remember { mutableStateOf("") }
     var aiSpokenAnswer by remember { mutableStateOf("") }
@@ -138,9 +147,64 @@ fun VoiceListeningDialog(
             val agentResp = groqClient.processUserVoiceQuery(speech)
             var reply = agentResp.replyText
 
-            if (agentResp.actionCommand == "FIX_AUDIO") {
-                val fixResult = audioService.fixSoundIssues()
-                reply = "$reply $fixResult"
+            when (agentResp.actionCommand) {
+                "FIX_AUDIO" -> {
+                    val fixResult = audioService.fixSoundIssues()
+                    reply = "$reply $fixResult"
+                    NudgeActivityRepository.logActivity(
+                        title = "Sound Restored to 85%",
+                        description = "Voice triggered: \"$speech\". Restored volume streams & cleared DND.",
+                        category = "FIX",
+                        badgeText = "Sound Fixed",
+                        badgeBg = Color(0xFFE8F8F0),
+                        badgeTextCol = Color(0xFF21A15C),
+                        iconRes = R.drawable.ic_volume_red
+                    )
+                }
+                "TOGGLE_TORCH" -> {
+                    val torchRes = devControl.toggleTorch()
+                    reply = "$reply $torchRes"
+                    NudgeActivityRepository.logActivity(
+                        title = "Flashlight Toggled",
+                        description = "Hardware torch triggered via voice command.",
+                        category = "FIX",
+                        badgeText = "Torch",
+                        badgeBg = Color(0xFFFFFBEB),
+                        badgeTextCol = Color(0xFFD97706),
+                        iconRes = R.drawable.ic_sparkles
+                    )
+                }
+                "OPEN_BRIGHTNESS" -> {
+                    devControl.openDisplaySettings()
+                    reply = "$reply Opening display settings."
+                }
+                "OPEN_ALARM" -> {
+                    devControl.openAlarmSettings()
+                    reply = "$reply Opening clock and alarms."
+                }
+                "CALL_FAMILY" -> {
+                    devControl.openDialer()
+                    reply = "$reply Opening phone dialer."
+                }
+                "OPEN_SETTINGS" -> {
+                    devControl.openApplicationSettings()
+                    reply = "$reply Opening settings."
+                }
+                "OPEN_WIFI" -> {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
+                    } catch (_: Exception) {}
+                }
+                "OPEN_BLUETOOTH" -> {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
+                    } catch (_: Exception) {}
+                }
+                "OPEN_BATTERY" -> {
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_POWER_USAGE_SUMMARY).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
+                    } catch (_: Exception) {}
+                }
             }
 
             aiSpokenAnswer = reply

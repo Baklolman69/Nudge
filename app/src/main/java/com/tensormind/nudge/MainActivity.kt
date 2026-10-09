@@ -8,7 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.tensormind.nudge.ui.screens.HomeScreen
+import com.tensormind.nudge.ui.screens.MainContainer
 import com.tensormind.nudge.ui.screens.OnboardingContainer
 import com.tensormind.nudge.ui.theme.NudgeTheme
 
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
                 var showHomeScreen by remember { mutableStateOf(true) }
 
                 if (showHomeScreen) {
-                    HomeScreen()
+                    MainContainer()
                 } else {
                     OnboardingContainer(
                         onComplete = {
