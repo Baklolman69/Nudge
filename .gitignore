@@ -1,18 +1,40 @@
 *.iml
-.gradle
-/local.properties
+.gradle/
+**/build/
+build/
 local.properties
+/local.properties
 .idea/
+.kotlin/
 .DS_Store
-/build
+Thumbs.db
 /captures
 .externalNativeBuild
 .cxx
+
+# Binaries & Bundles
 *.apk
+*.aab
+*.ap_
+
+# Logs & Dumps
+*.log
+*.hprof
+*.dump
+
+# Tests & Coverage
+app/src/test/
+app/src/androidTest/
+**/androidTest/
+**/test/
+
+# Screenshots & Recording artifacts
+screenshots/
+captures/
+*.screenshot.*
 
 # Sensitive & Personal Learning Context
 /devpost/learner-profile.md
 .claude/
 .env
 .env.*
-*.log

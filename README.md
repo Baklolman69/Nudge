@@ -377,9 +377,7 @@ Nudge/
 │   ├── scope.md                                      # Project kernel & boundary definition
 │   ├── prd.md                                        # Product requirements document
 │   ├── spec.md                                       # Technical specification & architecture
-│   ├── checklist.md                                  # Step-by-step build & verification records
-│   └── learner-profile.md                            # Learner background & goal alignment
-├── Nudge-v1.0-debug.apk                              # Standalone ready-to-test APK package
+│   └── checklist.md                                  # Step-by-step build & verification records
 ├── build.gradle.kts                                  # Root build configuration
 └── settings.gradle.kts                               # Project module settings
 ```
@@ -388,15 +386,10 @@ Nudge/
 
 ## 🚀 Getting Started & Installation
 
-### Option 1: Install the Pre-built APK (Immediate Testing)
-1. Download or copy `Nudge-v1.0-debug.apk` onto an Android phone or emulator.
-2. Tap the APK file in your file browser to install (allow *"Install from unknown sources"* if prompted).
-3. Launch **Nudge** from your app drawer!
-
-### Option 2: Build from Source in Android Studio
+### Build & Run from Source (Android Studio)
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/your-username/Nudge.git
+   git clone https://github.com/Baklolman69/Nudge.git
    cd Nudge
    ```
 
@@ -413,6 +406,10 @@ Nudge/
 4. **Run on Device or Emulator**:
    - Connect an Android device (via USB or Wireless Debugging) or launch an Android Virtual Device (AVD running API 26 or higher).
    - Click the green **Run 'app'** button or press **Shift + F10**.
+   - Alternatively, build from command line:
+     ```bash
+     ./gradlew assembleDebug
+     ```
 
 ---
 
@@ -420,7 +417,6 @@ Nudge/
 
 This project was built following the **Flipped Interaction Plan-First Curriculum** of the *Build With AI: Basics* hackathon:
 
-- 📑 **[Learner Profile](devpost/learner-profile.md)**: Establishes learner background and hackathon objectives.
 - 🎯 **[Scope Doc](devpost/scope.md)**: Defined the distinctive kernel (on-device action agent vs. generic chatbot) and locked the strict proof-of-concept boundary.
 - 📋 **[PRD](devpost/prd.md)**: Specified the complete user journey, UI interaction states, and zero-jargon copy requirements.
 - 📐 **[Spec](devpost/spec.md)**: Architected the tech stack, component interactions, and data models.
