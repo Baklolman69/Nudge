@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tensormind.nudge.R
 import com.tensormind.nudge.ai.GroqQwenClient
+import com.tensormind.nudge.ai.NudgeSkillsEngine
 import com.tensormind.nudge.diagnostics.AudioDiagnosticService
 import com.tensormind.nudge.diagnostics.DeviceControlService
 import com.tensormind.nudge.diagnostics.SmsDiagnosticService
@@ -101,6 +102,7 @@ fun HomeScreen(
     val healthService = remember { DeviceHealthService(context) }
     val smsService = remember { SmsDiagnosticService(context) }
     val deviceControl = remember { DeviceControlService(context) }
+    val skillsEngine = remember { NudgeSkillsEngine(context, audioService, deviceControl) }
     val groqClient = remember { GroqQwenClient() }
     val voiceManager = remember { NudgeVoiceManager(context) }
 
@@ -516,6 +518,8 @@ fun HomeScreen(
             ChatAssistantDialog(
                 groqClient = groqClient,
                 audioService = audioService,
+                deviceControl = deviceControl,
+                skillsEngine = skillsEngine,
                 onOpenScamSheet = {
                     showChatSheet = false
                     showScamSheet = true
@@ -530,6 +534,7 @@ fun HomeScreen(
                 groqClient = groqClient,
                 audioService = audioService,
                 deviceControl = deviceControl,
+                skillsEngine = skillsEngine,
                 onDismiss = { showVoiceSheet = false }
             )
         }

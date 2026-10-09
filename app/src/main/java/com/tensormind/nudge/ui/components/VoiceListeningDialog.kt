@@ -60,6 +60,8 @@ import com.tensormind.nudge.ai.GroqQwenClient
 import com.tensormind.nudge.diagnostics.AudioDiagnosticService
 import com.tensormind.nudge.diagnostics.DeviceControlService
 import com.tensormind.nudge.diagnostics.NudgeActivityRepository
+import com.tensormind.nudge.ai.NudgeSkillsEngine
+import com.tensormind.nudge.ai.SkillExecutionStep
 import com.tensormind.nudge.ui.theme.NavyText
 import com.tensormind.nudge.ui.theme.NudgeBlue
 import com.tensormind.nudge.ui.theme.SlateSubtitle
@@ -81,13 +83,18 @@ fun VoiceListeningDialog(
     groqClient: GroqQwenClient,
     audioService: AudioDiagnosticService,
     deviceControl: DeviceControlService? = null,
+    skillsEngine: NudgeSkillsEngine? = null,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val devControl = deviceControl ?: remember { DeviceControlService(context) }
+    val engine = skillsEngine ?: remember { NudgeSkillsEngine(context, audioService, devControl) }
+
     var voiceState by remember { mutableStateOf(VoiceState.LISTENING) }
     var userSpokenQuery by remember { mutableStateOf("") }
     var aiSpokenAnswer by remember { mutableStateOf("") }
+    var executionSteps by remember { mutableStateOf<List<SkillExecutionStep>>(emptyList()) }
+    var resolutionBadge by remember { mutableStateOf<String?>(null) }
     var thinkingStepIndex by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -144,72 +151,12 @@ fun VoiceListeningDialog(
         voiceState = VoiceState.THINKING
 
         scope.launch {
-            val agentResp = groqClient.processUserVoiceQuery(speech)
-            var reply = agentResp.replyText
-
-            when (agentResp.actionCommand) {
-                "FIX_AUDIO" -> {
-                    val fixResult = audioService.fixSoundIssues()
-                    reply = "$reply $fixResult"
-                    NudgeActivityRepository.logActivity(
-                        title = "Sound Restored to 85%",
-                        description = "Voice triggered: \"$speech\". Restored volume streams & cleared DND.",
-                        category = "FIX",
-                        badgeText = "Sound Fixed",
-                        badgeBg = Color(0xFFE8F8F0),
-                        badgeTextCol = Color(0xFF21A15C),
-                        iconRes = R.drawable.ic_volume_red
-                    )
-                }
-                "TOGGLE_TORCH" -> {
-                    val torchRes = devControl.toggleTorch()
-                    reply = "$reply $torchRes"
-                    NudgeActivityRepository.logActivity(
-                        title = "Flashlight Toggled",
-                        description = "Hardware torch triggered via voice command.",
-                        category = "FIX",
-                        badgeText = "Torch",
-                        badgeBg = Color(0xFFFFFBEB),
-                        badgeTextCol = Color(0xFFD97706),
-                        iconRes = R.drawable.ic_sparkles
-                    )
-                }
-                "OPEN_BRIGHTNESS" -> {
-                    devControl.openDisplaySettings()
-                    reply = "$reply Opening display settings."
-                }
-                "OPEN_ALARM" -> {
-                    devControl.openAlarmSettings()
-                    reply = "$reply Opening clock and alarms."
-                }
-                "CALL_FAMILY" -> {
-                    devControl.openDialer()
-                    reply = "$reply Opening phone dialer."
-                }
-                "OPEN_SETTINGS" -> {
-                    devControl.openApplicationSettings()
-                    reply = "$reply Opening settings."
-                }
-                "OPEN_WIFI" -> {
-                    try {
-                        context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
-                    } catch (_: Exception) {}
-                }
-                "OPEN_BLUETOOTH" -> {
-                    try {
-                        context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
-                    } catch (_: Exception) {}
-                }
-                "OPEN_BATTERY" -> {
-                    try {
-                        context.startActivity(Intent(Intent.ACTION_POWER_USAGE_SUMMARY).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
-                    } catch (_: Exception) {}
-                }
-            }
-
-            aiSpokenAnswer = reply
+            val executionResult = engine.executeAutonomousWorkflow(speech)
+            aiSpokenAnswer = executionResult.finalResolutionReport
+            executionSteps = executionResult.steps
+            resolutionBadge = executionResult.badgeTitle
             voiceState = VoiceState.SPEAKING
-            voiceManager.speak(reply)
+            voiceManager.speak(executionResult.finalResolutionReport)
         }
     }
 
@@ -478,6 +425,70 @@ fun VoiceListeningDialog(
                             fontWeight = FontWeight.Medium,
                             lineHeight = 22.sp
                         )
+
+                        resolutionBadge?.let { badge ->
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFFE8F8F0))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = "✓ $badge",
+                                    color = Color(0xFF15803D),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        if (executionSteps.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White)
+                                    .padding(10.dp)
+                            ) {
+                                Text(
+                                    text = "⚡ Autonomous Actions Performed:",
+                                    color = NudgeBlue,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                executionSteps.forEach { step ->
+                                    Row(
+                                        modifier = Modifier.padding(vertical = 2.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Text(
+                                            text = "✓",
+                                            color = Color(0xFF15803D),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Column {
+                                            Text(
+                                                text = step.stepTitle,
+                                                color = NavyText,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                text = step.description,
+                                                color = SlateSubtitle,
+                                                fontSize = 11.sp,
+                                                lineHeight = 15.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

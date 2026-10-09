@@ -76,6 +76,9 @@ import androidx.compose.ui.unit.sp
 import com.tensormind.nudge.R
 import com.tensormind.nudge.ai.GroqQwenClient
 import com.tensormind.nudge.diagnostics.AudioDiagnosticService
+import com.tensormind.nudge.ai.NudgeSkillsEngine
+import com.tensormind.nudge.ai.SkillExecutionStep
+import com.tensormind.nudge.diagnostics.DeviceControlService
 import com.tensormind.nudge.ui.theme.NavyText
 import com.tensormind.nudge.ui.theme.NudgeBlue
 import com.tensormind.nudge.ui.theme.SlateSubtitle
@@ -95,6 +98,10 @@ data class ChatMessage(
     val id: String = UUID.randomUUID().toString(),
     val isUser: Boolean,
     val text: String,
+    val steps: List<SkillExecutionStep> = emptyList(),
+    val badgeTitle: String? = null,
+    val badgeColor: Color = Color.Transparent,
+    val badgeTextColor: Color = Color.Transparent,
     val actionDetail: AgentActionDetail? = null
 )
 
@@ -103,15 +110,20 @@ data class ChatMessage(
 fun ChatAssistantDialog(
     groqClient: GroqQwenClient,
     audioService: AudioDiagnosticService,
+    deviceControl: DeviceControlService? = null,
+    skillsEngine: NudgeSkillsEngine? = null,
     onOpenScamSheet: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val devControl = deviceControl ?: remember { DeviceControlService(context) }
+    val engine = skillsEngine ?: remember { NudgeSkillsEngine(context, audioService, devControl) }
+
     val messages = remember {
         mutableStateListOf(
             ChatMessage(
                 isUser = false,
-                text = "Hello! I'm Nudge, your autonomous phone companion. I can run commands and fix settings on your phone for you\u2014just ask me in simple words!"
+                text = "Hello! I'm Nudge, your autonomous phone companion. I can run commands and fix settings on your phone for you—just ask me in simple words!"
             )
         )
     }
@@ -196,80 +208,17 @@ fun ChatAssistantDialog(
             delay(100)
             listState.animateScrollToItem(messages.size)
 
-            val agentResp = groqClient.processUserVoiceQuery(trimmed)
-            var reply = agentResp.replyText
-            val action = agentResp.actionCommand
-
-            var actionDetail: AgentActionDetail? = null
-
-            when (action) {
-                "FIX_AUDIO" -> {
-                    audioService.fixSoundIssues(playChime = false)
-                    actionDetail = AgentActionDetail(
-                        title = "Sound & Ringer Restored",
-                        description = "Nudge turned off Silent mode and set your ringtone and media volume to 85%.",
-                        icon = "\uD83D\uDD0A",
-                        buttonText = "Re-check Sound Levels",
-                        actionType = "FIX_AUDIO"
-                    )
-                }
-                "OPEN_WIFI" -> {
-                    actionDetail = AgentActionDetail(
-                        title = "Wi-Fi & Internet Panel",
-                        description = "Nudge prepared your phone's connection panel so you can reconnect with 1 tap.",
-                        icon = "\uD83C\uDF10",
-                        buttonText = "Open Wi-Fi Settings Now",
-                        actionType = "OPEN_WIFI"
-                    )
-                    executePhoneAction("OPEN_WIFI")
-                }
-                "OPEN_BLUETOOTH" -> {
-                    actionDetail = AgentActionDetail(
-                        title = "Bluetooth Accessories",
-                        description = "Nudge can help connect your headphones, hearing aid, or car audio.",
-                        icon = "\uD83C\uDFA7",
-                        buttonText = "Open Bluetooth Settings",
-                        actionType = "OPEN_BLUETOOTH"
-                    )
-                    executePhoneAction("OPEN_BLUETOOTH")
-                }
-                "OPEN_BATTERY" -> {
-                    actionDetail = AgentActionDetail(
-                        title = "Battery Doctor & Cooling",
-                        description = "Nudge opened Battery Saver to cool down your phone and extend battery life.",
-                        icon = "\u26A1",
-                        buttonText = "View Battery Details",
-                        actionType = "OPEN_BATTERY"
-                    )
-                    executePhoneAction("OPEN_BATTERY")
-                }
-                "CALL_FAMILY" -> {
-                    actionDetail = AgentActionDetail(
-                        title = "Family Quick-Dial",
-                        description = "Nudge opened your phone dialer so you can reach your family immediately.",
-                        icon = "\uD83D\uDCDE",
-                        buttonText = "Open Phone Dialer",
-                        actionType = "CALL_FAMILY"
-                    )
-                    executePhoneAction("CALL_FAMILY")
-                }
-                "OPEN_SCAM_CHECK" -> {
-                    actionDetail = AgentActionDetail(
-                        title = "Safety Scam Shield",
-                        description = "Nudge is ready to inspect any suspicious text or link to keep your bank safe.",
-                        icon = "\uD83D\uDEE1\uFE0F",
-                        buttonText = "Scan Messages for Scams",
-                        actionType = "OPEN_SCAM_CHECK"
-                    )
-                }
-            }
-
+            val execution = engine.executeAutonomousWorkflow(trimmed)
             isThinking = false
+
             messages.add(
                 ChatMessage(
                     isUser = false,
-                    text = reply,
-                    actionDetail = actionDetail
+                    text = execution.finalResolutionReport,
+                    steps = execution.steps,
+                    badgeTitle = execution.badgeTitle,
+                    badgeColor = execution.badgeColor,
+                    badgeTextColor = execution.badgeTextColor
                 )
             )
             delay(100)
@@ -336,11 +285,13 @@ fun ChatAssistantDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(
-                    "\uD83D\uDD0A Fix my sound",
-                    "\uD83C\uDF10 Open Wi-Fi setup",
-                    "\u26A1 Cool down battery",
-                    "\uD83D\uDEE1\uFE0F Check suspicious text",
-                    "\uD83D\uDCDE Call my family"
+                    "⚡ Boost my phone speed",
+                    "🔊 Fix my sound",
+                    "🌐 Check internet connection",
+                    "🔋 Battery & storage check",
+                    "🛡️ Check suspicious text",
+                    "🔦 Flashlight",
+                    "📞 Call my family"
                 ).forEach { suggestion ->
                     Box(
                         modifier = Modifier
@@ -403,7 +354,7 @@ fun ChatAssistantDialog(
                                     .background(Color(0xFFEBF5FF)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(text = "\uD83E\uDD16", fontSize = 16.sp)
+                                Text(text = "🤖", fontSize = 16.sp)
                             }
 
                             Spacer(modifier = Modifier.width(8.dp))
@@ -429,6 +380,74 @@ fun ChatAssistantDialog(
                                         lineHeight = 21.sp
                                     )
 
+                                    // Badge showing action result
+                                    if (msg.badgeTitle != null) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(msg.badgeColor)
+                                                .padding(horizontal = 9.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = "✓ ${msg.badgeTitle}",
+                                                color = msg.badgeTextColor,
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+
+                                    // Executed skills steps list
+                                    if (msg.steps.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Card(
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .border(1.dp, Color(0xFFE2EDFE), RoundedCornerShape(12.dp))
+                                        ) {
+                                            Column(modifier = Modifier.padding(10.dp)) {
+                                                Text(
+                                                    text = "⚡ Autonomous Actions Performed:",
+                                                    color = NudgeBlue,
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                msg.steps.forEach { step ->
+                                                    Row(
+                                                        modifier = Modifier.padding(vertical = 2.dp),
+                                                        verticalAlignment = Alignment.Top
+                                                    ) {
+                                                        Text(
+                                                            text = "✓",
+                                                            color = Color(0xFF15803D),
+                                                            fontSize = 12.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                        Column {
+                                                            Text(
+                                                                text = step.stepTitle,
+                                                                color = NavyText,
+                                                                fontSize = 12.sp,
+                                                                fontWeight = FontWeight.SemiBold
+                                                            )
+                                                            Text(
+                                                                text = step.description,
+                                                                color = SlateSubtitle,
+                                                                fontSize = 11.sp,
+                                                                lineHeight = 15.sp
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
                                     if (msg.actionDetail != null) {
                                         Spacer(modifier = Modifier.height(10.dp))
                                         Card(
@@ -446,7 +465,7 @@ fun ChatAssistantDialog(
                                                     Text(text = msg.actionDetail.icon, fontSize = 20.sp)
                                                     Column {
                                                         Text(
-                                                            text = "\u26A1 Action Executed by Agent",
+                                                            text = "⚡ Action Executed by Agent",
                                                             color = Color(0xFF007AFF),
                                                             fontSize = 11.5.sp,
                                                             fontWeight = FontWeight.Bold
