@@ -1,4 +1,4 @@
-# 🌸 Nudge — Your Patient AI Phone Guardian
+# 🌸 Nudge — Your Friendly AI Phone Guardian
 
 > **Built for the [Devpost Build With AI: Basics](https://learn-ai-basics.devpost.com/) Hackathon**  
 > *A voice-first, on-device Android companion designed to empower older adults and non-tech users with independent confidence over their smartphones.*
@@ -45,7 +45,7 @@ Instead, Nudge is an **on-device action agent**:
 - It directly inspects real Android hardware states (volume streams, DND filters, network capabilities, battery temperature).
 - It executes 1-tap safe restorations (e.g. restoring ringers to 85% with a reassuring musical chime).
 - It evaluates suspicious text messages in under 500ms using **Groq-accelerated Qwen 2.5**.
-- It communicates entirely through large tactile touch cards, voice input (STT), and warm, patient spoken audio (TTS)—with **zero technical jargon**.
+- It communicates entirely through large tactile touch cards, voice input (STT), and warm, gentle spoken audio (TTS)—with **zero technical jargon**.
 
 ---
 
