@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="52dp"
+    android:viewportWidth="52"
+    android:viewportHeight="52">
+    <!-- Blue Circle Background -->
+    <path
+        android:fillColor="#007AFF"
+        android:pathData="M26,26m-24,0a24,24 0 1,0 48,0a24,24 0 1,0 -48,0" />
+    <!-- White Wi-Fi Icon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M26,34 C27.7,34 29,32.7 29,31 C29,29.3 27.7,28 26,28 C24.3,28 23,29.3 23,31 C23,32.7 24.3,34 26,34 Z M26,22 C29.1,22 32,23.3 34.1,25.4 L36.9,22.6 C34.1,19.8 30.2,18 26,18 C21.8,18 17.9,19.8 15.1,22.6 L17.9,25.4 C20,23.3 22.9,22 26,22 Z M26,14 C31.3,14 36.1,16.1 39.7,19.7 L42.5,16.9 C38.2,12.6 32.4,10 26,10 C19.6,10 13.8,12.6 9.5,16.9 L12.3,19.7 C15.9,16.1 20.7,14 26,14 Z" />
+</vector>

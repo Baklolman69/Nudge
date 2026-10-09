@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="52dp"
+    android:viewportWidth="52"
+    android:viewportHeight="52">
+    <!-- Gold Circle Background -->
+    <path
+        android:fillColor="#FF9F00"
+        android:pathData="M26,26m-24,0a24,24 0 1,0 48,0a24,24 0 1,0 -48,0" />
+    <!-- White Shield with Diamond -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M26,13 L15,18 V26 C15,32.8 19.7,39.1 26,40.7 C32.3,39.1 37,32.8 37,26 V18 L26,13 Z M26,22 L30,27 L26,32 L22,27 L26,22 Z" />
+</vector>

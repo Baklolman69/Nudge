@@ -1,0 +1,18 @@
+*.iml
+.gradle
+/local.properties
+local.properties
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+
+# Sensitive & Personal Learning Context
+/devpost/learner-profile.md
+.claude/
+.env
+.env.*
+*.log

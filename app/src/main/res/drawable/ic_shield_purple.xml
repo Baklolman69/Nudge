@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Purple circle background -->
+    <path
+        android:fillColor="#6F42C1"
+        android:pathData="M24,24m-22,0a22,22 0 1,0 44,0a22,22 0 1,0 -44,0" />
+    <!-- White Shield with arrow/lock -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,11 L14,15 V23 C14,29.5 18.3,35.5 24,37 C29.7,35.5 34,29.5 34,23 V15 L24,11 Z M24,17 C25.7,17 27,18.3 27,20 V22 H28 C28.6,22 29,22.4 29,23 V29 C29,29.6 28.6,30 28,30 H20 C19.4,30 19,29.6 19,29 V23 C19,22.4 19.4,22 20,22 H21 V20 C21,18.3 22.3,17 24,17 Z M24,18.5 C23.2,18.5 22.5,19.2 22.5,20 V22 H25.5 V20 C25.5,19.2 24.8,18.5 24,18.5 Z" />
+</vector>

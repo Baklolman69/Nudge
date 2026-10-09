@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="40dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40">
+    <!-- Blue Circle -->
+    <path
+        android:fillColor="#0E73F6"
+        android:pathData="M20,20m-18,0a18,18 0 1,0 36,0a18,18 0 1,0 -36,0" />
+    <!-- White Heart -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,28 L18.55,26.68 C13.4,22.01 10,18.93 10,15.12 C10,12.04 12.42,9.62 15.5,9.62 C17.24,9.62 18.91,10.43 20,11.7 C21.09,10.43 22.76,9.62 24.5,9.62 C27.58,9.62 30,12.04 30,15.12 C30,18.93 26.6,22.01 21.45,26.69 L20,28 Z" />
+</vector>

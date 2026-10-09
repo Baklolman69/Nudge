@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="52dp"
+    android:viewportWidth="52"
+    android:viewportHeight="52">
+    <!-- Red Circle Background -->
+    <path
+        android:fillColor="#FF4D6D"
+        android:pathData="M26,26m-24,0a24,24 0 1,0 48,0a24,24 0 1,0 -48,0" />
+    <!-- White Speaker Icon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16,21 V31 H21 L27,37 V15 L21,21 H16 Z M32.5,26 C32.5,22.7 30.6,19.9 27.8,18.5 V33.5 C30.6,32.1 32.5,29.3 32.5,26 Z M27.8,12 V14.8 C32.5,16.1 36,20.6 36,26 C36,31.4 32.5,35.9 27.8,37.2 V40 C34,38.6 38.5,32.8 38.5,26 C38.5,19.2 34,13.4 27.8,12 Z" />
+</vector>

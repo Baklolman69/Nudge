@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Orange circle background -->
+    <path
+        android:fillColor="#FF9F43"
+        android:pathData="M24,24m-22,0a22,22 0 1,0 44,0a22,22 0 1,0 -44,0" />
+    <!-- White People / Family Icon -->
+    <!-- Center Person -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,19 A3.5,3.5 0 1,0 24,12 A3.5,3.5 0 1,0 24,19 Z M24,21 C20.3,21 16.5,22.8 16.5,25.5 V28 H31.5 V25.5 C31.5,22.8 27.7,21 24,21 Z" />
+    <!-- Left Person -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16,18 A3,3 0 1,0 16,12 A3,3 0 1,0 16,18 Z M16,20 C14.3,20 11,20.9 11,22.6 V25 H15 V23.5 C15,22.1 16.2,20.8 17.8,20.3 C17.2,20.1 16.6,20 16,20 Z" />
+    <!-- Right Person -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,18 A3,3 0 1,0 32,12 A3,3 0 1,0 32,18 Z M32,20 C31.4,20 30.8,20.1 30.2,20.3 C31.8,20.8 33,22.1 33,23.5 V25 H37 V22.6 C37,20.9 33.7,20 32,20 Z" />
+</vector>
