@@ -218,22 +218,22 @@ fun HomeScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF1E293B))
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFE8F8F0))
                                 .clickable { showDevSheet = true }
-                                .padding(horizontal = 8.dp, vertical = 5.dp)
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Text(
-                                text = "DEV",
-                                color = Color(0xFF22C55E),
-                                fontSize = 11.sp,
+                                text = "⚡ Tools",
+                                color = Color(0xFF21A15C),
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
                         Image(
                             painter = painterResource(id = R.drawable.ic_settings),
-                            contentDescription = "Settings & Developer Console",
+                            contentDescription = "Smart Assistant Tools",
                             modifier = Modifier
                                 .size(36.dp)
                                 .clickable { showDevSheet = true }
